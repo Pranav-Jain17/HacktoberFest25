@@ -1,8 +1,9 @@
 export default function DownloadButton({ enhancedText }) {
-  const onDownload = () => {
-    const file = new Blob([enhancedText], { type: "text/plain" });
+  const handleDownload = () => {
+    const blob = new Blob([enhancedText], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(file);
+    link.href = url;
     link.download = "enhanced_resume.txt";
     document.body.appendChild(link);
     link.click();
@@ -11,8 +12,8 @@ export default function DownloadButton({ enhancedText }) {
   return (
     <div className="text-center">
       <button
-        className="bg-gradient-to-r from-pink-500 to-violet-600 hover:from-violet-600 hover:to-pink-600 transition-all px-5 py-3 mt-6 text-lg font-bold rounded-xl text-white shadow-lg active:scale-95"
-        onClick={onDownload}
+        onClick={handleDownload}
+        className="mt-6 px-5 py-3 text-lg font-bold text-white bg-blue-700 rounded-xl shadow-lg hover:bg-blue-800 active:scale-95 transition"
       >
         Download Enhanced Resume
       </button>

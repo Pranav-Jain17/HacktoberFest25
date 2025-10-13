@@ -9,9 +9,9 @@ export default function App() {
   const [enhancedText, setEnhancedText] = useState("");
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-indigo-900 via-purple-900 to-pink-900 flex flex-col px-2">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center px-2">
       <EliteHeader />
-      <main className="w-full max-w-2xl mx-auto flex-1 flex flex-col items-center justify-center">
+      <main className="flex-1 w-full max-w-2xl mx-auto flex flex-col items-center justify-center">
         {!resumeFile ? (
           <FileUpload setResumeFile={setResumeFile} />
         ) : (
@@ -24,8 +24,8 @@ export default function App() {
           </>
         )}
       </main>
-      <footer className="mx-auto text-xs text-gray-400 py-4 opacity-70">
-        © 2025 | Powered by Gemini AI | Elite Resume SPA
+      <footer className="text-xs text-blue-800 py-4 font-medium opacity-80">
+        © 2025 | AI Resume Enhancer SPA
       </footer>
     </div>
   );

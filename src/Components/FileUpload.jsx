@@ -26,24 +26,25 @@ export default function FileUpload({ setResumeFile }) {
   }
 
   return (
-    <div className="w-full px-2">
+    <section className="w-full">
       <div
         onClick={() => inputRef.current.click()}
         onDragEnter={handleDrag}
         onDragOver={handleDrag}
         onDragLeave={handleDrag}
         onDrop={handleDrop}
-        className={`rounded-2xl shadow-xl transition-all duration-300 border-2 border-dashed border-violet-400 cursor-pointer w-full bg-white/10 backdrop-blur-md px-6 py-12 md:py-20 flex flex-col items-center gap-4 ${
-          dragActive ? "border-pink-400 bg-pink-400/20" : ""
+        className={`rounded-2xl border-2 transition-all duration-300 border-blue-300 cursor-pointer w-full bg-white px-6 py-12 md:py-20 flex flex-col items-center gap-4 shadow-lg ${
+          dragActive ? "border-blue-500 bg-blue-50" : ""
         }`}
       >
-        <span className="mb-2 text-4xl text-indigo-200">📄</span>
-        <h2 className="text-lg font-semibold text-gray-100 mb-3">
-          Drag & Drop your <span className="text-violet-400">PDF</span>, <span className="text-pink-400">DOCX</span> or <span className="text-fuchsia-400">TXT</span> resume here
+        <span className="mb-2 text-4xl text-blue-400">📄</span>
+        <h2 className="text-lg font-semibold text-blue-700 mb-2">
+          Drag & Drop your <span className="text-blue-500">PDF</span>,{" "}
+          <span className="text-blue-500">DOCX</span> or <span className="text-blue-500">TXT</span> resume here
         </h2>
         <button
           onClick={e => (e.stopPropagation(), inputRef.current.click())}
-          className="transition-all px-4 py-2 rounded-lg bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 text-white shadow active:scale-95 hover:from-pink-600 hover:to-violet-600 font-bold"
+          className="px-4 py-2 rounded-lg bg-blue-600 text-white font-bold shadow hover:bg-blue-700 transition"
         >
           Select File
         </button>
@@ -54,10 +55,10 @@ export default function FileUpload({ setResumeFile }) {
           onChange={handleChange}
           className="hidden"
         />
-        <small className="block mt-2 text-xs text-gray-400">
-          We never store your data. Resume processed locally & via secure AI.
+        <small className="block mt-2 text-xs text-blue-400">
+          No data stored. Resume is processed securely with AI!
         </small>
       </div>
-    </div>
+    </section>
   );
 }
