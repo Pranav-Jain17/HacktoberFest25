@@ -1,11 +1,11 @@
 export default function EliteHeader() {
   return (
-    <header className="text-center mt-12 mb-8">
-      <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 via-pink-500 to-indigo-200">
+    <header className="text-center mt-10 mb-10">
+      <h1 className="text-4xl md:text-5xl font-black text-blue-700">
         AI Resume Enhancer
       </h1>
-      <p className="text-xl mt-2 text-gray-300">
-        Upload, Enhance, and Download your ATS-optimized resume with AI!
+      <p className="text-lg mt-3 text-blue-500 font-semibold">
+        Upload your resume, enhance for ATS, and download—it's that simple!
       </p>
     </header>
   );
