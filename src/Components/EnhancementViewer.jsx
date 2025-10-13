@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { enhanceResumeWithGemini } from "../hooks/gemini";
+import { extractText, enhanceResumeWithGemini } from "../hooks/gemini";
 
 export default function EnhancementViewer({ resumeFile, setEnhancedText }) {
   const [result, setResult] = useState("");
@@ -15,17 +15,27 @@ export default function EnhancementViewer({ resumeFile, setEnhancedText }) {
       setResult("");
 
       try {
-        const enhanced = await enhanceResumeWithGemini(resumeFile);
-        if (!enhanced || enhanced.trim() === "") {
+        // Extract text and format from the uploaded file
+        const { text: resumeText, format } = await extractText(resumeFile);
+
+        if (typeof resumeText !== "string" || resumeText.trim() === "") {
+          throw new Error("Could not extract text from the file or text is empty.");
+        }
+
+        const uploaderName = resumeFile.name.split(".")[0] || "Anonymous";
+
+        // Call enhancement with extracted text and format
+        const enhanced = await enhanceResumeWithGemini(resumeText, format, uploaderName);
+
+        if (typeof enhanced !== "string" || enhanced.trim() === "") {
           throw new Error("Empty response from AI");
         }
+
         setResult(enhanced);
         setEnhancedText(enhanced);
       } catch (e) {
         console.error("Enhancement error:", e);
-        setError(
-          e.message || "Could not enhance your resume. Please retry."
-        );
+        setError(e.message || "Could not enhance your resume. Please retry.");
       } finally {
         setLoading(false);
       }
@@ -39,19 +49,17 @@ export default function EnhancementViewer({ resumeFile, setEnhancedText }) {
           <p className="animate-pulse text-xl text-blue-400 mb-2">
             Enhancing your resume with Gemini AI…
           </p>
-          <p className="text-sm text-blue-300">
-            Parsing file and optimizing for ATS...
-          </p>
+          <p className="text-sm text-blue-300">Parsing file and optimizing for ATS...</p>
         </div>
       )}
-      
+
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-600 font-semibold mb-2">Error:</p>
           <p className="text-red-500 break-words">{error}</p>
         </div>
       )}
-      
+
       {!loading && result && !error && (
         <>
           <h3 className="font-bold text-lg text-blue-700 mb-4">
