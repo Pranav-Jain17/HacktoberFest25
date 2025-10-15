@@ -1,27 +1,44 @@
 import axios from "axios";
 import mammoth from "mammoth";
 import * as pdfjsLib from "pdfjs-dist";
+import { jsPDF } from "jspdf";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
 
-// Use local worker file from public folder
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+// Set PDF.js worker
+// Import worker using Vite's ?url syntax
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+// Set worker using the imported URL
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// ==================== FILE PARSING ====================
 
 async function parsePDF(file) {
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({
-      data: arrayBuffer,
-    });
-
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
+    
     let text = "";
-
+    
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map(item => item.str).join(" ");
-      text += pageText + "\n";
+      
+      let lastY = null;
+      let pageText = "";
+      
+      textContent.items.forEach((item) => {
+        // Add line break if Y position changed significantly
+        if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+          pageText += "\n";
+        }
+        pageText += item.str + " ";
+        lastY = item.transform[5];
+      });
+      
+      text += pageText.trim() + "\n\n";
     }
-
+    
     return text.trim();
   } catch (error) {
     console.error("PDF parsing error:", error);
@@ -32,8 +49,8 @@ async function parsePDF(file) {
 async function parseDOCX(file) {
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const { value } = await mammoth.extractRawText({ arrayBuffer });
-    return value.trim();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value.trim();
   } catch (error) {
     console.error("DOCX parsing error:", error);
     throw new Error(`DOCX parsing failed: ${error.message}`);
@@ -51,99 +68,256 @@ async function parseTXT(file) {
 }
 
 /**
- * Extracts text and format from resume file (PDF, DOCX, DOC, TXT)
+ * Extract text from file and return both text and format
  */
 export async function extractText(file) {
   const name = file.name.toLowerCase();
   const type = file.type;
-
-  console.log("File info:", { name, type, size: file.size });
-
+  
+  let text = "";
+  let format = "";
+  
   try {
     if (type === "application/pdf" || name.endsWith(".pdf")) {
-      const text = await parsePDF(file);
-      return { text, format: "pdf" };
-    }
-
-    if (
+      text = await parsePDF(file);
+      format = "pdf";
+    } else if (
       type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       type === "application/msword" ||
       name.endsWith(".docx") ||
       name.endsWith(".doc")
     ) {
-      const text = await parseDOCX(file);
-      return { text, format: "docx" };
+      text = await parseDOCX(file);
+      format = "docx";
+    } else if (type === "text/plain" || name.endsWith(".txt")) {
+      text = await parseTXT(file);
+      format = "txt";
+    } else {
+      text = await parseTXT(file);
+      format = "txt";
     }
-
-    if (type === "text/plain" || name.endsWith(".txt")) {
-      const text = await parseTXT(file);
-      return { text, format: "txt" };
-    }
-
-    // Fallback: treat as text
-    const text = await parseTXT(file);
-    return { text, format: "txt" };
+    
+    return { text, format };
   } catch (e) {
     console.error("File parse error:", e);
     throw e;
   }
 }
 
+// ==================== FILE GENERATION ====================
+
 /**
- * Calls Gemini AI API to enhance resume content for ATS optimization.
- * The prompt asks AI to return enhanced resume in the same format as original.
+ * Generate PDF from enhanced text
  */
-export async function enhanceResumeWithGemini(resumeText, format, uploaderName = "Anonymous") {
+function generatePDF(enhancedText, uploaderName) {
+  const doc = new jsPDF();
+  
+  // Parse the enhanced text to extract sections
+  const lines = enhancedText.split('\n');
+  let y = 20;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 20;
+  const maxWidth = pageWidth - (margin * 2);
+  
+  // Header
+  doc.setFontSize(20);
+  doc.setFont(undefined, 'bold');
+  doc.text(uploaderName || "Resume", margin, y);
+  y += 10;
+  
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  
+  lines.forEach(line => {
+    line = line.trim();
+    if (!line) {
+      y += 5;
+      return;
+    }
+    
+    // Check if line is a heading (all caps or contains ATS/SCORE)
+    const isHeading = line === line.toUpperCase() || 
+                      line.includes('ATS') || 
+                      line.includes('SCORE') ||
+                      line.endsWith(':');
+    
+    if (isHeading) {
+      y += 5;
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(12);
+    } else {
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(10);
+    }
+    
+    // Split long lines
+    const splitText = doc.splitTextToSize(line, maxWidth);
+    splitText.forEach(textLine => {
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.text(textLine, margin, y);
+      y += isHeading ? 8 : 6;
+    });
+  });
+  
+  return doc.output('arraybuffer');
+}
+
+/**
+ * Generate DOCX from enhanced text
+ */
+async function generateDOCX(enhancedText, uploaderName) {
+  const lines = enhancedText.split('\n');
+  const children = [];
+  
+  // Add title
+  children.push(
+    new Paragraph({
+      text: uploaderName || "Enhanced Resume",
+      heading: HeadingLevel.HEADING_1,
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 }
+    })
+  );
+  
+  lines.forEach(line => {
+    line = line.trim();
+    if (!line) {
+      children.push(new Paragraph({ text: "" }));
+      return;
+    }
+    
+    const isHeading = line === line.toUpperCase() || 
+                      line.includes('ATS') || 
+                      line.includes('SCORE') ||
+                      line.endsWith(':');
+    
+    if (isHeading) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: line,
+              bold: true,
+              size: 24
+            })
+          ],
+          spacing: { before: 200, after: 100 }
+        })
+      );
+    } else {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: line,
+              size: 22
+            })
+          ],
+          spacing: { after: 100 }
+        })
+      );
+    }
+  });
+  
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: children
+    }]
+  });
+  
+  return await Packer.toBuffer(doc);
+}
+
+/**
+ * Generate TXT from enhanced text
+ */
+function generateTXT(enhancedText) {
+  return new TextEncoder().encode(enhancedText);
+}
+
+// ==================== GEMINI AI ENHANCEMENT ====================
+
+/**
+ * Enhance resume with Gemini AI and return base64 of the enhanced file
+ */
+export async function enhanceResumeWithGemini(resumeText, format, uploaderName) {
   if (!resumeText || resumeText.trim() === "") {
-    throw new Error("Could not extract text from file. Please ensure the file contains readable text.");
+    throw new Error("Resume text is empty");
   }
 
-  console.log("Extracted text length:", resumeText.length);
-
   const prompt = `
-Please enhance this resume for maximum ATS score. Return the full enhanced resume content in the same file format (${format.toUpperCase()}) and layout with formatting preserved.
+You are an expert ATS (Applicant Tracking System) resume optimizer. Analyze and enhance the following resume to maximize ATS compatibility and improve its professional impact.
 
-Include the following metadata lines at the very beginning of your response exactly as shown (replace placeholders):
+INSTRUCTIONS:
+1. Provide an ATS Score (0-100) at the top
+2. Enhance keywords relevant to the candidate's field
+3. Improve formatting for ATS readability
+4. Strengthen action verbs and quantifiable achievements
+5. Maintain the original structure but improve clarity
+6. Keep the same sections (Experience, Education, Skills, etc.)
 
-Uploader Name: ${uploaderName}
-Original ATS Score: [score out of 100]
-Optimized ATS Score: [score out of 100]
+OUTPUT FORMAT:
+Start with "ATS SCORE: [score]/100" followed by a brief explanation.
+Then provide the complete enhanced resume text with all original sections improved.
 
-After that, output the full improved resume text with score details.
-
-Resume content:
+ORIGINAL RESUME:
 ${resumeText}
-`;
+
+ENHANCED RESUME:`;
 
   const apiKey = import.meta.env.VITE_GEMINI_KEY;
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   try {
-    const response = await axios.post(
-      endpoint,
-      {
-        contents: [
-          {
-            parts: [{ text: prompt }],
-          },
-        ],
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await axios.post(endpoint, {
+      contents: [{ parts: [{ text: prompt }] }],
+    }, {
+      headers: { 'Content-Type': 'application/json' }
+    });
 
-    const result = response?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!result) {
+    const enhancedText = response?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!enhancedText) {
       throw new Error("No response from Gemini AI");
     }
-
-    return result;
+    
+    // Generate file in original format
+    let fileBuffer;
+    
+    switch (format) {
+      case "pdf":
+        fileBuffer = generatePDF(enhancedText, uploaderName);
+        break;
+      case "docx":
+        fileBuffer = await generateDOCX(enhancedText, uploaderName);
+        break;
+      case "txt":
+        fileBuffer = generateTXT(enhancedText);
+        break;
+      default:
+        fileBuffer = generateTXT(enhancedText);
+    }
+    
+    // Convert to base64
+    const base64 = btoa(
+      new Uint8Array(fileBuffer).reduce(
+        (data, byte) => data + String.fromCharCode(byte),
+        ''
+      )
+    );
+    
+    return {
+      enhancedText,
+      base64,
+      format
+    };
+    
   } catch (error) {
-    console.error("Gemini API Error:", error.response?.data || error.message);
+    console.error('Gemini API Error:', error.response?.data || error.message);
     throw new Error(error.response?.data?.error?.message || error.message || "AI enhancement failed");
   }
 }

@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { extractText, enhanceResumeWithGemini } from "../hooks/gemini";
 
-export default function EnhancementViewer({ 
-  resumeFile, 
-  setEnhancedText, 
-  setBase64FileContent, 
-  setFileFormat 
-}) {
+// Basic base64 format validation (checks if string only has base64 chars and padding)
+const isValidBase64 = (str) => {
+  if (typeof str !== "string") return false;
+  // base64 regex covers A-Z, a-z, 0-9, +, / with optional padding =
+  const base64Regex = /^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$/;
+  return base64Regex.test(str);
+};
+
+export default function EnhancementViewer({ resumeFile, setEnhancedText, setBase64FileContent, setFileFormat }) {
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -20,23 +23,40 @@ export default function EnhancementViewer({
       setResult("");
 
       try {
-        // Extract text and format from file
+        // Extract text and format from the uploaded file
         const { text: resumeText, format } = await extractText(resumeFile);
-        
-        if (!resumeText || resumeText.trim() === "") {
-          throw new Error("Could not extract text from file");
+
+        if (typeof resumeText !== "string" || resumeText.trim() === "") {
+          throw new Error("Could not extract text from the file or text is empty.");
         }
 
-        const uploaderName = resumeFile.name.replace(/\.[^/.]+$/, "") || "Resume";
+        const uploaderName = resumeFile.name.split(".")[0] || "Anonymous";
 
-        // Get enhanced resume with base64
+        // Call enhancement with extracted text and format
         const enhanced = await enhanceResumeWithGemini(resumeText, format, uploaderName);
         
-        setResult(enhanced.enhancedText);
-        setEnhancedText(enhanced.enhancedText);
-        setBase64FileContent(enhanced.base64);
-        setFileFormat(enhanced.format);
-        
+        // Validate base64 before setting
+        if (enhanced.base64 && isValidBase64(enhanced.base64)) {
+          setBase64FileContent(enhanced.base64);
+        } else {
+          setBase64FileContent("");
+          console.warn("Invalid or missing base64 data from enhancement API");
+        }
+
+        if (enhanced.format) {
+          setFileFormat(enhanced.format);
+        }
+
+        if (typeof enhanced.enhancedText === "string") {
+          setResult(enhanced.enhancedText);
+          setEnhancedText(enhanced.enhancedText);
+        } else if (typeof enhanced === "string" && enhanced.trim() !== "") {
+          setResult(enhanced);
+          setEnhancedText(enhanced);
+        } else {
+          setResult("");
+          setEnhancedText("");
+        }
       } catch (e) {
         console.error("Enhancement error:", e);
         setError(e.message || "Could not enhance your resume. Please retry.");
@@ -53,9 +73,7 @@ export default function EnhancementViewer({
           <p className="animate-pulse text-xl text-blue-400 mb-2">
             Enhancing your resume with Gemini AI…
           </p>
-          <p className="text-sm text-blue-300">
-            Parsing file and optimizing for ATS...
-          </p>
+          <p className="text-sm text-blue-300">Parsing file and optimizing for ATS...</p>
         </div>
       )}
 

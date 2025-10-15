@@ -2,24 +2,14 @@ export default function DownloadButton({
   enhancedFileBase64,
   fileFormat
 }) {
-  // Helper to convert base64 to Blob and trigger download
+  // Helper to download file blob from base64 string
   const downloadFileFromBase64 = (base64Data, fileName, mimeType) => {
-    const byteCharacters = atob(base64Data);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: mimeType });
-
-    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
+    link.href = `data:${mimeType};base64,${base64Data}`;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   const handleDownload = () => {
@@ -37,7 +27,7 @@ export default function DownloadButton({
           mimeType = "text/plain";
           break;
         default:
-          mimeType = "application/octet-stream"; // fallback MIME type
+          mimeType = "application/octet-stream";
       }
       downloadFileFromBase64(enhancedFileBase64, `enhanced_resume.${ext}`, mimeType);
     } else {
