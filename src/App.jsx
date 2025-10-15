@@ -7,6 +7,8 @@ import DownloadButton from "./Components/DownloadButton";
 export default function App() {
   const [resumeFile, setResumeFile] = useState(null);
   const [enhancedText, setEnhancedText] = useState("");
+  const [base64FileContent, setBase64FileContent] = useState("");
+  const [fileFormat, setFileFormat] = useState("");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center px-2">
@@ -19,8 +21,15 @@ export default function App() {
             <EnhancementViewer
               resumeFile={resumeFile}
               setEnhancedText={setEnhancedText}
+              setBase64FileContent={setBase64FileContent}
+              setFileFormat={setFileFormat}
             />
-            {enhancedText && <DownloadButton enhancedText={enhancedText} />}
+            {enhancedText && base64FileContent && (
+              <DownloadButton
+                enhancedFileBase64={base64FileContent}
+                fileFormat={fileFormat}
+              />
+            )}
           </>
         )}
       </main>
