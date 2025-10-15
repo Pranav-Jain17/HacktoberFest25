@@ -4,12 +4,12 @@ import * as pdfjsLib from "pdfjs-dist";
 import { jsPDF } from "jspdf";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
 
-// Set PDF.js worker
 // Import worker using Vite's ?url syntax
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 // Set worker using the imported URL
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
 // ==================== FILE PARSING ====================
 
 async function parsePDF(file) {
@@ -107,19 +107,18 @@ export async function extractText(file) {
 // ==================== FILE GENERATION ====================
 
 /**
- * Generate PDF from enhanced text
+ * Generate PDF from enhanced resume text (no scores)
  */
-function generatePDF(enhancedText, uploaderName) {
+function generatePDF(enhancedResumeText, uploaderName) {
   const doc = new jsPDF();
   
-  // Parse the enhanced text to extract sections
-  const lines = enhancedText.split('\n');
+  const lines = enhancedResumeText.split('\n');
   let y = 20;
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
   const maxWidth = pageWidth - (margin * 2);
   
-  // Header
+  // Header with uploader name
   doc.setFontSize(20);
   doc.setFont(undefined, 'bold');
   doc.text(uploaderName || "Resume", margin, y);
@@ -135,11 +134,8 @@ function generatePDF(enhancedText, uploaderName) {
       return;
     }
     
-    // Check if line is a heading (all caps or contains ATS/SCORE)
-    const isHeading = line === line.toUpperCase() || 
-                      line.includes('ATS') || 
-                      line.includes('SCORE') ||
-                      line.endsWith(':');
+    // Check if line is a heading (all caps or ends with colon)
+    const isHeading = line === line.toUpperCase() || line.endsWith(':');
     
     if (isHeading) {
       y += 5;
@@ -166,10 +162,10 @@ function generatePDF(enhancedText, uploaderName) {
 }
 
 /**
- * Generate DOCX from enhanced text
+ * Generate DOCX from enhanced resume text (no scores)
  */
-async function generateDOCX(enhancedText, uploaderName) {
-  const lines = enhancedText.split('\n');
+async function generateDOCX(enhancedResumeText, uploaderName) {
+  const lines = enhancedResumeText.split('\n');
   const children = [];
   
   // Add title
@@ -189,10 +185,7 @@ async function generateDOCX(enhancedText, uploaderName) {
       return;
     }
     
-    const isHeading = line === line.toUpperCase() || 
-                      line.includes('ATS') || 
-                      line.includes('SCORE') ||
-                      line.endsWith(':');
+    const isHeading = line === line.toUpperCase() || line.endsWith(':');
     
     if (isHeading) {
       children.push(
@@ -233,16 +226,16 @@ async function generateDOCX(enhancedText, uploaderName) {
 }
 
 /**
- * Generate TXT from enhanced text
+ * Generate TXT from enhanced resume text (no scores)
  */
-function generateTXT(enhancedText) {
-  return new TextEncoder().encode(enhancedText);
+function generateTXT(enhancedResumeText) {
+  return new TextEncoder().encode(enhancedResumeText);
 }
 
 // ==================== GEMINI AI ENHANCEMENT ====================
 
 /**
- * Enhance resume with Gemini AI and return base64 of the enhanced file
+ * Enhance resume with Gemini AI and return separate display and download content
  */
 export async function enhanceResumeWithGemini(resumeText, format, uploaderName) {
   if (!resumeText || resumeText.trim() === "") {
@@ -250,24 +243,24 @@ export async function enhanceResumeWithGemini(resumeText, format, uploaderName) 
   }
 
   const prompt = `
-You are an expert ATS (Applicant Tracking System) resume optimizer. Analyze and enhance the following resume to maximize ATS compatibility and improve its professional impact.
+You are an expert ATS (Applicant Tracking System) resume optimizer. Analyze and enhance the following resume.
 
-INSTRUCTIONS:
-1. Provide an ATS Score (0-100) at the top
-2. Enhance keywords relevant to the candidate's field
-3. Improve formatting for ATS readability
-4. Strengthen action verbs and quantifiable achievements
-5. Maintain the original structure but improve clarity
-6. Keep the same sections (Experience, Education, Skills, etc.)
+CRITICAL INSTRUCTIONS - FOLLOW EXACTLY:
+1. First provide ATS analysis with scores
+2. Then add the marker: ###RESUME_START###
+3. After the marker, provide ONLY the clean enhanced resume (no scores, no analysis, no explanations)
 
 OUTPUT FORMAT:
-Start with "ATS SCORE: [score]/100" followed by a brief explanation.
-Then provide the complete enhanced resume text with all original sections improved.
+=== ATS ANALYSIS ===
+Original ATS Score: [X]/100
+Enhanced ATS Score: [Y]/100
+Key Improvements: [list what was improved]
+
+###RESUME_START###
+[ONLY the enhanced resume content here - ready to send to employers]
 
 ORIGINAL RESUME:
-${resumeText}
-
-ENHANCED RESUME:`;
+${resumeText}`;
 
   const apiKey = import.meta.env.VITE_GEMINI_KEY;
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
@@ -279,27 +272,115 @@ ENHANCED RESUME:`;
       headers: { 'Content-Type': 'application/json' }
     });
 
-    const enhancedText = response?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const fullResponse = response?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
     
-    if (!enhancedText) {
+    if (!fullResponse) {
       throw new Error("No response from Gemini AI");
     }
     
-    // Generate file in original format
+    console.log("=== FULL AI RESPONSE ===");
+    console.log(fullResponse);
+    console.log("======================");
+    
+    // Split using the marker
+    let enhancedResumeOnly = fullResponse;
+    
+    if (fullResponse.includes("###RESUME_START###")) {
+      const parts = fullResponse.split("###RESUME_START###");
+      enhancedResumeOnly = parts[1].trim();
+      console.log("✅ Found ###RESUME_START### marker");
+    } else if (fullResponse.includes("=== ENHANCED RESUME ===")) {
+      const parts = fullResponse.split("=== ENHANCED RESUME ===");
+      enhancedResumeOnly = parts[1].trim();
+      console.log("✅ Found === ENHANCED RESUME === marker");
+    } else {
+      console.log("⚠️ No marker found, using fallback parsing");
+      // Fallback: try to remove everything before the actual resume content
+      const lines = fullResponse.split('\n');
+      let startIndex = 0;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].toLowerCase();
+        // Find where actual resume content starts (after analysis)
+        if (line.includes('experience') || 
+            line.includes('education') || 
+            line.includes('skills') ||
+            line.includes('summary') ||
+            line.includes('professional') ||
+            line.includes('objective')) {
+          startIndex = i;
+          console.log(`✅ Found resume content start at line ${i}: ${lines[i]}`);
+          break;
+        }
+      }
+      
+      if (startIndex > 0) {
+        enhancedResumeOnly = lines.slice(startIndex).join('\n').trim();
+      }
+    }
+    
+    // Remove any remaining analysis markers and score lines
+  // Remove any unnecessary symbols and clean the enhanced resume text
+enhancedResumeOnly = enhancedResumeOnly
+  // Remove separators, hashtags, equals signs
+  .replace(/^[=\-#\s]+$/gm, '')
+  .replace(/^#+\s?/gm, '')
+  .replace(/^={2,}\s?/gm, '')
+  // Remove ATS metadata or extra instructions
+  .replace(/Original ATS Score:.*/gi, '')
+  .replace(/Enhanced ATS Score:.*/gi, '')
+  .replace(/Key Improvements:.*/gi, '')
+  .replace(/Explanation:.*/gi, '')
+  .replace(/ATS ANALYSIS/gi, '')
+  // Clean asterisks (Markdown bullets)
+  .replace(/^\s*\*\s?/gm, '')
+  // Remove Markdown-style emphasis
+  .replace(/\*\*/g, '')
+  .replace(/\*/g, '')
+  // Strip trailing markers between lines
+  .replace(/^[=#]+\s*(.*)$/gm, '$1')
+  .replace(/^\s*=\s*$/gm, '')
+  // Final text cleanup
+  .split('\n')
+  .map(line =>
+    line
+      .replace(/^#+\s*/, '')
+      .replace(/^=+\s*/, '')
+      .replace(/\s*=+\s*$/, '')
+      .trim()
+  )
+  .filter(line => {
+    const lower = line.toLowerCase();
+    return (
+      line.trim().length > 0 &&
+      !lower.includes('ats score') &&
+      !lower.includes('key improvement') &&
+      !lower.includes('explanation:')
+    );
+  })
+  .join('\n')
+  .trim();
+
+    
+    console.log("=== CLEAN RESUME ONLY (for PDF) ===");
+    console.log(enhancedResumeOnly);
+    console.log("===================================");
+    
+    // Generate file with ONLY the enhanced resume (no scores)
     let fileBuffer;
     
     switch (format) {
       case "pdf":
-        fileBuffer = generatePDF(enhancedText, uploaderName);
+        fileBuffer = generatePDF(enhancedResumeOnly, uploaderName);
         break;
       case "docx":
-        fileBuffer = await generateDOCX(enhancedText, uploaderName);
+        fileBuffer = await generateDOCX(enhancedResumeOnly, uploaderName);
         break;
       case "txt":
-        fileBuffer = generateTXT(enhancedText);
+        fileBuffer = generateTXT(enhancedResumeOnly);
         break;
       default:
-        fileBuffer = generateTXT(enhancedText);
+        fileBuffer = generateTXT(enhancedResumeOnly);
     }
     
     // Convert to base64
@@ -311,8 +392,9 @@ ENHANCED RESUME:`;
     );
     
     return {
-      enhancedText,
-      base64,
+      displayText: fullResponse,              // Full text with scores for UI
+      enhancedResumeOnly: enhancedResumeOnly, // Just resume for download
+      base64,                                  // File with only resume
       format
     };
     
