@@ -28,7 +28,7 @@ This Code applies in all community spaces and when representing the project.
 
 ## Enforcement
 Instances of abusive or harassing behavior may be reported by contacting  
-the team at **frontend-team-brl@example.com** (replace with your contact).  
+the frontend team at BRL.  
 All complaints will be reviewed and investigated.
 
 ## Attribution
