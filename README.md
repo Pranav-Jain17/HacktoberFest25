@@ -75,21 +75,7 @@ Render
 
 Make sure you configure your environment variables (VITE_GEMINI_KEY) through the deployment settings (not in code).
 
-Folder Structure
 
-src/
-├── components/
-│   ├── EnhancementViewer.jsx
-│   ├── DownloadButton.jsx
-│   └── ...
-├── hooks/
-│   └── gemini.js
-├── utils/
-│   └── resumeTemplate.js
-├── App.jsx
-├── main.jsx
-.env
-.gitignore
 🧑‍💻 Contributing
 Contributions are welcome!
 If you find a bug or have ideas for new features, open an issue or submit a pull request.
