@@ -9,3 +9,6 @@
 7. Wait for review and merge approval.
 
 💡 Tip: Start with issues labeled `good first issue`.
+
+
+git config --system core.longpaths true
