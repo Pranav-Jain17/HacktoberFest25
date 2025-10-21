@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { extractText, enhanceResumeWithGemini } from "../hooks/gemini";
+import { useTranslation } from "react-i18next";
 
 // Cleans markdown-style and GPT separator symbols for UI display
 function cleanResumeText(input) {
@@ -44,6 +45,8 @@ export default function EnhancementViewer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const { t, i18n } = useTranslation(); 
+
   useEffect(() => {
     if (!resumeFile) return;
 
@@ -57,13 +60,13 @@ export default function EnhancementViewer({
         const { text: resumeText, format } = await extractText(resumeFile);
         
         if (!resumeText || resumeText.trim() === "") {
-          throw new Error("Could not extract text from file");
+          throw new Error(t("errors.noText"));
         }
 
         const uploaderName = resumeFile.name.replace(/\.[^/.]+$/, "") || "Resume";
-
+         const language = i18n.language || 'en'; 
         // Get enhanced resume with base64
-        const enhanced = await enhanceResumeWithGemini(resumeText, format, uploaderName);
+        const enhanced = await enhanceResumeWithGemini(resumeText, format, uploaderName, language);
 
         // Clean the display text for UI (remove markdown/asterisks/hashes/etc)
         const cleanDisplay = cleanResumeText(enhanced.displayText);
@@ -77,12 +80,12 @@ export default function EnhancementViewer({
         
       } catch (e) {
         console.error("Enhancement error:", e);
-        setError(e.message || "Could not enhance your resume. Please retry.");
+        setError(e.message || t("errors.generic"));
       } finally {
         setLoading(false);
       }
     })();
-  }, [resumeFile, setEnhancedText, setBase64FileContent, setFileFormat]);
+  }, [resumeFile, setEnhancedText, setBase64FileContent, setFileFormat, t]);
 
   // Helper to render formatted text
   const renderFormattedText = (text) => {
@@ -131,17 +134,17 @@ export default function EnhancementViewer({
       {loading && (
         <div className="text-center py-8">
           <p className="animate-pulse text-xl text-blue-400 mb-2">
-            Enhancing your resume with Gemini AI…
+            {t("enhancing.title")}
           </p>
           <p className="text-sm text-blue-300">
-            Parsing file and optimizing for ATS...
+            {t("enhancing.subtitle")}
           </p>
         </div>
       )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600 font-semibold mb-2">Error:</p>
+          <p className="text-red-600 font-semibold mb-2">{t("errors.title")}</p>
           <p className="text-red-500 break-words">{error}</p>
         </div>
       )}
@@ -149,7 +152,7 @@ export default function EnhancementViewer({
       {!loading && result && !error && (
         <>
           <h3 className="font-bold text-2xl text-blue-700 mb-6 flex items-center gap-2">
-            Enhanced Resume Analysis (ATS Optimized)
+            {t("enhanced.heading")}
           </h3>
           <div className="bg-white text-blue-800 p-6 rounded-xl max-h-[600px] overflow-auto border border-blue-100 shadow-inner">
             {renderFormattedText(result)}
