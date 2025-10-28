@@ -1,0 +1,37 @@
+{
+  "header": {
+    "title": "Mejorador de CV con IA",
+    "subtitle": "Sube tu currículum, optimízalo para ATS y descárgalo — ¡así de simple!"
+  },
+  "resume": {
+    "experience": "Experiencia",
+    "skills": "Habilidades",
+    "education": "Educación",
+    "summary": "Resumen",
+    "contact": "Información de contacto",
+    "languages": "Idiomas"
+  },
+  "enhancing": {
+    "title": "Mejorando tu currículum con Gemini AI…",
+    "subtitle": "Analizando el archivo y optimizando para ATS..."
+  },
+  "errors": {
+    "title": "Error:",
+    "noText": "No se pudo extraer texto del archivo",
+    "generic": "No se pudo mejorar tu currículum. Por favor, inténtalo de nuevo."
+  },
+  "enhanced": {
+    "heading": "Análisis de Currículum Mejorado (Optimizado para ATS)"
+  },
+  "upload": {
+    "title": "Arrastra y suelta tu",
+    "or": "o",
+    "here": "currículum aquí",
+    "button": "Seleccionar archivo",
+    "note": "No se almacenan datos. El currículum se procesa de forma segura con IA."
+  },
+  "download": {
+    "button": "Descargar CV mejorado",
+    "noFile": "No hay archivo de CV mejorado disponible para descargar"
+  }
+}

@@ -3,7 +3,7 @@ import EliteHeader from "./Components/EliteHeader";
 import FileUpload from "./Components/FileUpload";
 import EnhancementViewer from "./Components/EnhancementViewer";
 import DownloadButton from "./Components/DownloadButton";
-
+import './i18n';
 export default function App() {
   const [resumeFile, setResumeFile] = useState(null);
   const [enhancedText, setEnhancedText] = useState("");
