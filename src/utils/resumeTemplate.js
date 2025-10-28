@@ -10,13 +10,13 @@ function escapeHtml(text) {
 /**
  * Wraps the plain AI-enhanced resume text into an elite professional HTML resume template.
  */
-export function generateEliteResumeHTML(enhancedText) {
-    console.log("Enhanced text for PDF:",enhancedText)
+export function generateEliteResumeHTML(enhancedText, language = 'en') {
+  console.log("Enhanced text for PDF:",enhancedText)
   const safeText = escapeHtml(enhancedText).replace(/\n/g, "<br>");
 
   return `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${language}">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
