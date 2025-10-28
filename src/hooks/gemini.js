@@ -241,13 +241,47 @@ function generateTXT(enhancedResumeText) {
 
 export async function enhanceResumeWithGemini(resumeText, format, uploaderName, language) {
   
-  const languageInstructions = {
-    en: "Respond in English.",
-    fr: "Réponds en français.",
-    es: "Responde en español.",
+  const languageConfig = {
+    en: {
+      instruction: "Respond in English.",
+      sectionHeadings: {
+        summary: "Professional Summary",
+        experience: "Work Experience",
+        education: "Education",
+        skills: "Skills",
+        languages: "Languages",
+        achievements: "Achievements",
+        certifications: "Certifications"
+      }
+    },
+    fr: {
+      instruction: "Réponds en français. Traduis tous les titres de sections et le contenu en français.",
+      sectionHeadings: {
+        summary: "Résumé Professionnel",
+        experience: "Expérience Professionnelle",
+        education: "Formation",
+        skills: "Compétences",
+        languages: "Langues",
+        achievements: "Réalisations",
+        certifications: "Certifications"
+      }
+    },
+    es: {
+      instruction: "Responde en español. Traduce todos los títulos de secciones y el contenido al español.",
+      sectionHeadings: {
+        summary: "Resumen Profesional",
+        experience: "Experiencia Profesional",
+        education: "Educación",
+        skills: "Habilidades",
+        languages: "Idiomas",
+        achievements: "Logros",
+        certifications: "Certificaciones"
+      }
+    }
   };
   
-  const langInstruction = languageInstructions[language] || languageInstructions.en;
+  const config = languageConfig[language] || languageConfig.en;
+  const sectionHeadings = Object.values(config.sectionHeadings).join('|');
 
   if (!resumeText || resumeText.trim() === "") {
     throw new Error("Resume text is empty");
@@ -255,11 +289,13 @@ export async function enhanceResumeWithGemini(resumeText, format, uploaderName, 
 
   const prompt = `
 You are an expert ATS (Applicant Tracking System) resume optimizer. Analyze and enhance the following resume.
-${langInstruction}
+${config.instruction}
 CRITICAL INSTRUCTIONS - FOLLOW EXACTLY:
-1. First provide ATS analysis with scores
+1. First provide ATS analysis with scores in the selected language
 2. Then add the marker: ###RESUME_START###
 3. After the marker, provide ONLY the clean enhanced resume (no scores, no analysis, no explanations)
+4. Make sure to translate all section headings to match exactly: ${Object.values(config.sectionHeadings).join(', ')}
+5. Ensure all content is properly translated and maintains professional tone in the target language
 
 OUTPUT FORMAT:
 === ATS ANALYSIS ===
