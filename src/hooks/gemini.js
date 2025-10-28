@@ -41,6 +41,8 @@ async function parsePDF(file) {
     
     return text.trim();
   } catch (error) {
+    
+
     console.error("PDF parsing error:", error);
     throw new Error(`PDF parsing failed: ${error.message}`);
   }
@@ -399,7 +401,13 @@ enhancedResumeOnly = enhancedResumeOnly
     };
     
   } catch (error) {
-    console.error('Gemini API Error:', error.response?.data || error.message);
+        console.error('Gemini API Error:', error.response?.data || error.message);
+
+    const errorResponse=error.response;
+     if (errorResponse && errorResponse.status ===429){
+     throw new Error(`AI enhancement failed API Limit Reached.Please wait and try again. `);
+     }
+
     throw new Error(error.response?.data?.error?.message || error.message || "AI enhancement failed");
   }
 }

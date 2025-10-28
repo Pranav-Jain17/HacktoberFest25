@@ -1,4 +1,4 @@
-export default function DownloadButton({ 
+ export default function DownloadButton({ 
   enhancedFileBase64,
   fileFormat
 }) {
