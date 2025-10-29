@@ -35,14 +35,12 @@ function extractATSScores(text) {
     improvements: []
   };
 
-  // Match patterns like "Original ATS Score: 65/100" or "Score: 65"
   const originalMatch = text.match(/Original\s+ATS\s+Score:\s*(\d+)(?:\/100)?/i);
   const enhancedMatch = text.match(/Enhanced\s+ATS\s+Score:\s*(\d+)(?:\/100)?/i);
   
   if (originalMatch) scores.original = parseInt(originalMatch[1]);
   if (enhancedMatch) scores.enhanced = parseInt(enhancedMatch[1]);
 
-  // Extract improvements section
   const improvementsMatch = text.match(/Key Improvements?:([\s\S]*?)(?=###|$)/i);
   if (improvementsMatch) {
     scores.improvements = improvementsMatch[1]
@@ -81,14 +79,40 @@ export default function EnhancementViewer({
   resumeFile, 
   setEnhancedText, 
   setBase64FileContent, 
-  setFileFormat 
+  setFileFormat,
+  errorData,
+  setErrorData,
+  isButtonDisabled,
+  setIsButtonDisabled,
+  setResetTimer
 }) {
-  const [result, setResult] = useState("");
+  const [originalText, setOriginalText] = useState(""); // NEW: Store original resume
+  const [enhancedResult, setEnhancedResult] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [atsScores, setAtsScores] = useState(null);
+  const [viewMode, setViewMode] = useState("enhanced"); // NEW: "original" or "enhanced"
 
-  const { t, i18n } = useTranslation(); 
+  const { t, i18n } = useTranslation();
+
+  // NEW: Keyboard shortcut handler
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Only trigger if Ctrl (or Cmd on Mac) is pressed
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          setViewMode("enhanced");
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          setViewMode("original");
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, []);
 
   useEffect(() => {
     if (!resumeFile) return;
@@ -96,7 +120,8 @@ export default function EnhancementViewer({
     (async () => {
       setLoading(true);
       setError("");
-      setResult("");
+      setEnhancedResult("");
+      setOriginalText("");
       setAtsScores(null);
 
       try {
@@ -106,19 +131,20 @@ export default function EnhancementViewer({
           throw new Error(t("errors.noText"));
         }
 
+        // Store original text
+        setOriginalText(resumeText);
+
         const uploaderName = resumeFile.name.replace(/\.[^/.]+$/, "") || "Resume";
-        const language = i18n.language || 'en'; 
+        const language = i18n.language || 'en';
         
         const enhanced = await enhanceResumeWithGemini(resumeText, format, uploaderName, language);
 
-        // Extract ATS scores from full response
         const scores = extractATSScores(enhanced.displayText);
         setAtsScores(scores);
 
-        // Clean the display text for UI
         const cleanDisplay = cleanResumeText(enhanced.displayText);
 
-        setResult(cleanDisplay);
+        setEnhancedResult(cleanDisplay);
         setEnhancedText(cleanDisplay);
         setBase64FileContent(enhanced.base64);
         setFileFormat(enhanced.format);
@@ -132,19 +158,17 @@ export default function EnhancementViewer({
     })();
   }, [resumeFile, setEnhancedText, setBase64FileContent, setFileFormat, t, i18n.language]);
 
-  // Helper to render formatted text with better mobile support
+  // Helper to render formatted text
   const renderFormattedText = (text) => {
     return text.split('\n').map((line, idx) => {
       const trimmedLine = line.trim();
       
-      // Skip ATS score lines (already displayed separately)
       if (trimmedLine.toLowerCase().includes('score:') || 
           trimmedLine.toLowerCase().includes('ats analysis') ||
           trimmedLine.toLowerCase().includes('key improvement')) {
         return null;
       }
 
-      // Section headers
       if (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length > 0 && trimmedLine.length < 50) {
         return (
           <p key={idx} className="font-bold text-blue-800 mt-6 mb-3 text-base sm:text-lg break-words">
@@ -153,7 +177,6 @@ export default function EnhancementViewer({
         );
       }
 
-      // Explanation text
       if (trimmedLine.startsWith('Explanation:')) {
         return (
           <p key={idx} className="text-gray-700 italic my-2 bg-blue-50 p-3 rounded text-sm sm:text-base break-words">
@@ -162,12 +185,10 @@ export default function EnhancementViewer({
         );
       }
 
-      // Empty lines
       if (!trimmedLine) {
         return <br key={idx} />;
       }
 
-      // Regular text with better mobile wrapping
       return (
         <p key={idx} className="my-1 text-gray-800 text-sm sm:text-base break-words leading-relaxed">
           {trimmedLine}
@@ -197,54 +218,107 @@ export default function EnhancementViewer({
         </div>
       )}
 
-      {!loading && result && !error && (
+      {!loading && (originalText || enhancedResult) && !error && (
         <>
-          <h3 className="font-bold text-xl sm:text-2xl text-blue-700 mb-4 sm:mb-6 flex items-center gap-2 break-words">
-            {t("enhanced.heading")}
-          </h3>
+          {/* NEW: Toggle Tabs with Keyboard Shortcut Hints */}
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setViewMode("original")}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 text-sm sm:text-base ${
+                  viewMode === "original"
+                    ? "bg-blue-600 text-white shadow-md"
+                    : "bg-white text-blue-600 border border-blue-300 hover:bg-blue-50"
+                }`}
+              >
+                {t("viewer.original")}
+              </button>
+              <button
+                onClick={() => setViewMode("enhanced")}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 text-sm sm:text-base ${
+                  viewMode === "enhanced"
+                    ? "bg-blue-600 text-white shadow-md"
+                    : "bg-white text-blue-600 border border-blue-300 hover:bg-blue-50"
+                }`}
+              >
+                {t("viewer.enhanced")}
+              </button>
+            </div>
 
-          {/* ATS Score Display */}
-          {atsScores && (atsScores.original !== null || atsScores.enhanced !== null) && (
-            <div className="bg-white p-4 sm:p-6 rounded-xl mb-4 sm:mb-6 shadow-md border border-blue-100">
-              <h4 className="text-base sm:text-lg font-bold text-blue-900 mb-4">ATS Score Analysis</h4>
-              
-              <div className="space-y-4">
-                {atsScores.original !== null && (
-                  <ATSScoreBar score={atsScores.original} label="Original Score" />
-                )}
-                
-                {atsScores.enhanced !== null && (
-                  <ATSScoreBar score={atsScores.enhanced} label="Enhanced Score" />
-                )}
+            {/* Keyboard Shortcut Hint */}
+            <div className="text-xs text-gray-500 bg-white px-3 py-1 rounded border border-gray-200">
+              <kbd className="px-2 py-1 bg-gray-100 rounded text-xs">Ctrl</kbd> + 
+              <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">←</kbd> / 
+              <kbd className="px-2 py-1 bg-gray-100 rounded text-xs ml-1">→</kbd>
+            </div>
+          </div>
+
+          {/* Content Display */}
+          {viewMode === "original" && originalText && (
+            <div className="space-y-4">
+              <h3 className="font-bold text-xl sm:text-2xl text-blue-700 mb-4 flex items-center gap-2">
+                {t("viewer.originalHeading")}
+              </h3>
+              <div className="bg-white text-gray-800 p-4 sm:p-6 rounded-xl max-h-[400px] sm:max-h-[600px] overflow-y-auto border border-blue-100 shadow-inner">
+                <pre className="whitespace-pre-wrap font-sans text-sm sm:text-base break-words">
+                  {originalText}
+                </pre>
               </div>
-
-              {/* Score improvement badge */}
-              {atsScores.original !== null && atsScores.enhanced !== null && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-green-800 font-semibold text-sm sm:text-base text-center">
-                    ✨ Improvement: +{atsScores.enhanced - atsScores.original} points
-                  </p>
-                </div>
-              )}
-
-              {/* Key improvements */}
-              {atsScores.improvements.length > 0 && (
-                <div className="mt-4">
-                  <p className="font-semibold text-gray-700 mb-2 text-sm sm:text-base">Key Improvements:</p>
-                  <ul className="list-disc list-inside space-y-1 text-gray-600 text-xs sm:text-sm">
-                    {atsScores.improvements.slice(0, 5).map((improvement, idx) => (
-                      <li key={idx} className="break-words">{improvement}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           )}
 
-          {/* Enhanced Resume Content */}
-          <div className="bg-white text-blue-800 p-4 sm:p-6 rounded-xl max-h-[400px] sm:max-h-[600px] overflow-y-auto border border-blue-100 shadow-inner">
-            {renderFormattedText(result)}
-          </div>
+          {viewMode === "enhanced" && enhancedResult && (
+            <>
+              <h3 className="font-bold text-xl sm:text-2xl text-blue-700 mb-4 sm:mb-6 flex items-center gap-2 break-words">
+                {t("enhanced.heading")}
+              </h3>
+
+              {/* ATS Score Display */}
+              {atsScores && (atsScores.original !== null || atsScores.enhanced !== null) && (
+                <div className="bg-white p-4 sm:p-6 rounded-xl mb-4 sm:mb-6 shadow-md border border-blue-100">
+                  <h4 className="text-base sm:text-lg font-bold text-blue-900 mb-4">
+                    {t("viewer.atsAnalysis")}
+                  </h4>
+                  
+                  <div className="space-y-4">
+                    {atsScores.original !== null && (
+                      <ATSScoreBar score={atsScores.original} label={t("viewer.originalScore")} />
+                    )}
+                    
+                    {atsScores.enhanced !== null && (
+                      <ATSScoreBar score={atsScores.enhanced} label={t("viewer.enhancedScore")} />
+                    )}
+                  </div>
+
+                  {atsScores.original !== null && atsScores.enhanced !== null && (
+                    <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-green-800 font-semibold text-sm sm:text-base text-center">
+                        ✨ {t("viewer.improvement")}: +{atsScores.enhanced - atsScores.original} {t("viewer.points")}
+                      </p>
+                    </div>
+                  )}
+
+                  {atsScores.improvements.length > 0 && (
+                    <div className="mt-4">
+                      <p className="font-semibold text-gray-700 mb-2 text-sm sm:text-base">
+                        {t("viewer.keyImprovements")}:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-gray-600 text-xs sm:text-sm">
+                        {atsScores.improvements.slice(0, 5).map((improvement, idx) => (
+                          <li key={idx} className="break-words">{improvement}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Enhanced Resume Content */}
+              <div className="bg-white text-blue-800 p-4 sm:p-6 rounded-xl max-h-[400px] sm:max-h-[600px] overflow-y-auto border border-blue-100 shadow-inner">
+                {renderFormattedText(enhancedResult)}
+              </div>
+            </>
+          )}
         </>
       )}
     </div>

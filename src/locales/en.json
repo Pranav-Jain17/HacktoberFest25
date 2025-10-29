@@ -33,5 +33,16 @@
   "download": {
     "button": "Download Enhanced Resume",
     "noFile": "No enhanced resume file available for download"
+  },
+  "viewer": {
+    "original": "Original",
+    "enhanced": "Enhanced",
+    "originalHeading": "📄 Original Resume",
+    "atsAnalysis": "ATS Score Analysis",
+    "originalScore": "Original Score",
+    "enhancedScore": "Enhanced Score",
+    "improvement": "Improvement",
+    "points": "points",
+    "keyImprovements": "Key Improvements"
   }
 }
