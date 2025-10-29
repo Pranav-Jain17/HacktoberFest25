@@ -402,12 +402,39 @@ enhancedResumeOnly = enhancedResumeOnly
     
   } catch (error) {
         console.error('Gemini API Error:', error.response?.data || error.message);
+      const errorResponse=error.response
+     if (errorResponse && errorResponse.status === 429) { 
+      let retryMsg = '';
+      const retryAfter = errorResponse.headers['retry-after'];
+      let delaySeconds = 300;
 
-    const errorResponse=error.response;
-     if (errorResponse && errorResponse.status ===429){
-     throw new Error(`AI enhancement failed API Limit Reached.Please wait and try again. `);
-     }
+      if (retryAfter) {
+        
+        const parsed = parseInt(retryAfter, 10);
+        if (!isNaN(parsed)) {
+          
+          delaySeconds = parsed;
+          const minutes = Math.ceil(parsed / 60);
+          retryMsg = ` Your quota is expected to reset in approximately ${minutes} minutes.`;
+        } else {
+       
+          retryMsg = ` Your quota will reset soon.`;
+        }
+      }
+      
+ 
+      throw new Error(
+        JSON.stringify({
+          type: 'QUOTA_EXCEEDED',
+          message: `AI Enhancement Failed: API Quota Limit Reached. ${retryMsg} Suggestion: Please try again later or visit your account dashboard to check/upgrade your plan.`,
+          delaySeconds: delaySeconds
+        })
+      );
+    
+    }else{
 
-    throw new Error(error.response?.data?.error?.message || error.message || "AI enhancement failed");
+
+    throw new Error(error.response?.data?.error?.message || error.message || "AI enhancement failed: An unexpected error occurred.");
+    }
   }
 }

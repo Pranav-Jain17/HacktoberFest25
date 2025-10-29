@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { extractText, enhanceResumeWithGemini } from "../hooks/gemini";
+ 
+
 
 // Cleans markdown-style and GPT separator symbols for UI display
 function cleanResumeText(input) {
