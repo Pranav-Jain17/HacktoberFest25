@@ -1,0 +1,37 @@
+{
+  "header": {
+    "title": "AI Resume Enhancer",
+    "subtitle": "Upload your resume, enhance for ATS, and download—it's that simple!"
+  },
+  "resume": {
+    "experience": "Experience",
+    "skills": "Skills",
+    "education": "Education",
+    "summary": "Summary",
+    "contact": "Contact Information",
+    "languages": "Languages"
+  },
+  "enhancing": {
+    "title": "Enhancing your resume with Gemini AI…",
+    "subtitle": "Parsing file and optimizing for ATS..."
+  },
+  "errors": {
+    "title": "Error:",
+    "noText": "Could not extract text from file",
+    "generic": "Could not enhance your resume. Please retry."
+  },
+  "enhanced": {
+    "heading": "Enhanced Resume Analysis (ATS Optimized)"
+  },
+  "upload": {
+    "title": "Drag & Drop your",
+    "or": "or",
+    "here": "resume here",
+    "button": "Select File",
+    "note": "No data stored. Resume is processed securely with AI!"
+  },
+  "download": {
+    "button": "Download Enhanced Resume",
+    "noFile": "No enhanced resume file available for download"
+  }
+}

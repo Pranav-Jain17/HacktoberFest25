@@ -239,14 +239,25 @@ function generateTXT(enhancedResumeText) {
 /**
  * Enhance resume with Gemini AI and return separate display and download content
  */
-export async function enhanceResumeWithGemini(resumeText, format, uploaderName) {
+
+
+export async function enhanceResumeWithGemini(resumeText, format, uploaderName, language) {
+  
+  const languageInstructions = {
+    en: "Respond in English.",
+    fr: "Réponds en français.",
+    es: "Responde en español.",
+  };
+  
+  const langInstruction = languageInstructions[language] || languageInstructions.en;
+
   if (!resumeText || resumeText.trim() === "") {
     throw new Error("Resume text is empty");
   }
 
   const prompt = `
 You are an expert ATS (Applicant Tracking System) resume optimizer. Analyze and enhance the following resume.
-
+${langInstruction}
 CRITICAL INSTRUCTIONS - FOLLOW EXACTLY:
 1. First provide ATS analysis with scores
 2. Then add the marker: ###RESUME_START###
