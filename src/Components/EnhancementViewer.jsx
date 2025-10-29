@@ -111,7 +111,7 @@ export default function EnhancementViewer({
       // Explanation or regular text
       if (trimmedLine.startsWith('Explanation:')) {
         return (
-          <p key={idx} className="text-gray-700 italic my-2 bg-blue-50 p-3 rounded">
+          <p key={idx} className="text-gray-800 italic my-2 bg-blue-100 p-3 rounded">
             {trimmedLine}
           </p>
         );
@@ -130,7 +130,7 @@ export default function EnhancementViewer({
   };
 
   return (
-    <div className="w-full mt-10 mb-6 p-7 md:p-10 rounded-2xl shadow-xl bg-blue-50 border border-blue-200">
+    <div className="w-full mt-10 mb-6 p-7 md:p-10 rounded-2xl shadow-xl bg-blue-100 border border-blue-300">
       {loading && (
         <div className="text-center py-8">
           <p className="animate-pulse text-xl text-blue-400 mb-2">
