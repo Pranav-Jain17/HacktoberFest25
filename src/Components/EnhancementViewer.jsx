@@ -14,16 +14,16 @@ function cleanResumeText(input) {
     .replace(/\*/g, "")
     .replace(/^[=#]+\s*(.*)$/gm, "$1")
     .replace(/^\s*=\s*$/gm, "")
-    .split('\n')
-    .map(line =>
+    .split("\n")
+    .map((line) =>
       line
-        .replace(/^#+\s*/, '')
-        .replace(/^=+\s*/, '')
-        .replace(/\s*=+\s*$/, '')
+        .replace(/^#+\s*/, "")
+        .replace(/^=+\s*/, "")
+        .replace(/\s*=+\s*$/, "")
         .trim()
     )
-    .filter(line => line.trim().length > 0)
-    .join('\n')
+    .filter((line) => line.trim().length > 0)
+    .join("\n")
     .trim();
 }
 
@@ -32,23 +32,29 @@ function extractATSScores(text) {
   const scores = {
     original: null,
     enhanced: null,
-    improvements: []
+    improvements: [],
   };
 
   // Match patterns like "Original ATS Score: 65/100" or "Score: 65"
-  const originalMatch = text.match(/Original\s+ATS\s+Score:\s*(\d+)(?:\/100)?/i);
-  const enhancedMatch = text.match(/Enhanced\s+ATS\s+Score:\s*(\d+)(?:\/100)?/i);
-  
+  const originalMatch = text.match(
+    /Original\s+ATS\s+Score:\s*(\d+)(?:\/100)?/i
+  );
+  const enhancedMatch = text.match(
+    /Enhanced\s+ATS\s+Score:\s*(\d+)(?:\/100)?/i
+  );
+
   if (originalMatch) scores.original = parseInt(originalMatch[1]);
   if (enhancedMatch) scores.enhanced = parseInt(enhancedMatch[1]);
 
   // Extract improvements section
-  const improvementsMatch = text.match(/Key Improvements?:([\s\S]*?)(?=###|$)/i);
+  const improvementsMatch = text.match(
+    /Key Improvements?:([\s\S]*?)(?=###|$)/i
+  );
   if (improvementsMatch) {
     scores.improvements = improvementsMatch[1]
-      .split('\n')
-      .map(line => line.replace(/^[\s\-\*]+/, '').trim())
-      .filter(line => line.length > 0);
+      .split("\n")
+      .map((line) => line.replace(/^[\s\-\*]+/, "").trim())
+      .filter((line) => line.length > 0);
   }
 
   return scores;
@@ -57,18 +63,25 @@ function extractATSScores(text) {
 // Progress bar component for ATS score
 function ATSScoreBar({ score, label }) {
   if (score === null || score === undefined) return null;
-  
+
   const percentage = Math.min(Math.max(score, 0), 100);
-  const color = percentage >= 80 ? 'bg-green-500' : percentage >= 60 ? 'bg-yellow-500' : 'bg-red-500';
-  
+  const color =
+    percentage >= 80
+      ? "bg-green-500"
+      : percentage >= 60
+      ? "bg-yellow-500"
+      : "bg-red-500";
+
   return (
     <div className="mb-4">
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-semibold text-gray-700">{label}</span>
-        <span className="text-lg font-bold text-blue-900">{percentage}/100</span>
+        <span className="text-lg font-bold text-blue-900">
+          {percentage}/100
+        </span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-        <div 
+        <div
           className={`h-full ${color} transition-all duration-500 ease-out rounded-full`}
           style={{ width: `${percentage}%` }}
         />
@@ -77,18 +90,20 @@ function ATSScoreBar({ score, label }) {
   );
 }
 
-export default function EnhancementViewer({ 
-  resumeFile, 
-  setEnhancedText, 
-  setBase64FileContent, 
-  setFileFormat 
+export default function EnhancementViewer({
+  resumeFile,
+  setEnhancedText,
+  setBase64FileContent,
+  setFileFormat,
+  enhanceButtonRef,
+  shortcutLabel,
 }) {
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [atsScores, setAtsScores] = useState(null);
 
-  const { t, i18n } = useTranslation(); 
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     if (!resumeFile) return;
@@ -101,15 +116,21 @@ export default function EnhancementViewer({
 
       try {
         const { text: resumeText, format } = await extractText(resumeFile);
-        
+
         if (!resumeText || resumeText.trim() === "") {
           throw new Error(t("errors.noText"));
         }
 
-        const uploaderName = resumeFile.name.replace(/\.[^/.]+$/, "") || "Resume";
-        const language = i18n.language || 'en'; 
-        
-        const enhanced = await enhanceResumeWithGemini(resumeText, format, uploaderName, language);
+        const uploaderName =
+          resumeFile.name.replace(/\.[^/.]+$/, "") || "Resume";
+        const language = i18n.language || "en";
+
+        const enhanced = await enhanceResumeWithGemini(
+          resumeText,
+          format,
+          uploaderName,
+          language
+        );
 
         // Extract ATS scores from full response
         const scores = extractATSScores(enhanced.displayText);
@@ -122,7 +143,6 @@ export default function EnhancementViewer({
         setEnhancedText(cleanDisplay);
         setBase64FileContent(enhanced.base64);
         setFileFormat(enhanced.format);
-        
       } catch (e) {
         console.error("Enhancement error:", e);
         setError(e.message || t("errors.generic"));
@@ -130,54 +150,104 @@ export default function EnhancementViewer({
         setLoading(false);
       }
     })();
-  }, [resumeFile, setEnhancedText, setBase64FileContent, setFileFormat, t, i18n.language]);
+  }, [
+    resumeFile,
+    setEnhancedText,
+    setBase64FileContent,
+    setFileFormat,
+    t,
+    i18n.language,
+  ]);
 
   // Helper to render formatted text with better mobile support
   const renderFormattedText = (text) => {
-    return text.split('\n').map((line, idx) => {
-      const trimmedLine = line.trim();
-      
-      // Skip ATS score lines (already displayed separately)
-      if (trimmedLine.toLowerCase().includes('score:') || 
-          trimmedLine.toLowerCase().includes('ats analysis') ||
-          trimmedLine.toLowerCase().includes('key improvement')) {
-        return null;
-      }
+    return text
+      .split("\n")
+      .map((line, idx) => {
+        const trimmedLine = line.trim();
 
-      // Section headers
-      if (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length > 0 && trimmedLine.length < 50) {
+        // Skip ATS score lines (already displayed separately)
+        if (
+          trimmedLine.toLowerCase().includes("score:") ||
+          trimmedLine.toLowerCase().includes("ats analysis") ||
+          trimmedLine.toLowerCase().includes("key improvement")
+        ) {
+          return null;
+        }
+
+        // Section headers
+        if (
+          trimmedLine === trimmedLine.toUpperCase() &&
+          trimmedLine.length > 0 &&
+          trimmedLine.length < 50
+        ) {
+          return (
+            <p
+              key={idx}
+              className="font-bold text-blue-800 mt-6 mb-3 text-base sm:text-lg break-words"
+            >
+              {trimmedLine}
+            </p>
+          );
+        }
+
+        // Explanation text
+        if (trimmedLine.startsWith("Explanation:")) {
+          return (
+            <p
+              key={idx}
+              className="text-gray-700 italic my-2 bg-blue-50 p-3 rounded text-sm sm:text-base break-words"
+            >
+              {trimmedLine}
+            </p>
+          );
+        }
+
+        // Empty lines
+        if (!trimmedLine) {
+          return <br key={idx} />;
+        }
+
+        // Regular text with better mobile wrapping
         return (
-          <p key={idx} className="font-bold text-blue-800 mt-6 mb-3 text-base sm:text-lg break-words">
+          <p
+            key={idx}
+            className="my-1 text-gray-800 text-sm sm:text-base break-words leading-relaxed"
+          >
             {trimmedLine}
           </p>
         );
-      }
-
-      // Explanation text
-      if (trimmedLine.startsWith('Explanation:')) {
-        return (
-          <p key={idx} className="text-gray-700 italic my-2 bg-blue-50 p-3 rounded text-sm sm:text-base break-words">
-            {trimmedLine}
-          </p>
-        );
-      }
-
-      // Empty lines
-      if (!trimmedLine) {
-        return <br key={idx} />;
-      }
-
-      // Regular text with better mobile wrapping
-      return (
-        <p key={idx} className="my-1 text-gray-800 text-sm sm:text-base break-words leading-relaxed">
-          {trimmedLine}
-        </p>
-      );
-    }).filter(Boolean);
+      })
+      .filter(Boolean);
   };
 
+  // Add Enhance Resume button (if not loading, not error, and resumeFile exists)
   return (
     <div className="w-full mt-6 sm:mt-10 mb-6 p-4 sm:p-7 md:p-10 rounded-2xl shadow-xl bg-blue-50 border border-blue-200">
+      {/* Enhance Resume Button */}
+      {!loading && !error && resumeFile && (
+        <div className="relative group inline-block mb-4">
+          <button
+            ref={enhanceButtonRef}
+            onClick={() => {
+              setEnhancedText("");
+              setBase64FileContent("");
+              setFileFormat("");
+              setLoading(true);
+              setTimeout(() => setLoading(false), 500); // fake loading
+            }}
+            className="px-4 py-2 rounded-lg bg-green-600 text-white font-bold shadow hover:bg-green-700 transition"
+          >
+            {t("enhance.button", "Enhance Resume")}
+          </button>
+          {shortcutLabel && (
+            <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded shadow border border-green-200 select-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">
+              {shortcutLabel}
+            </span>
+          )}
+        </div>
+      )}
+
       {loading && (
         <div className="text-center py-8">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4" />
@@ -192,7 +262,9 @@ export default function EnhancementViewer({
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600 font-semibold mb-2 text-sm sm:text-base">{t("errors.title")}</p>
+          <p className="text-red-600 font-semibold mb-2 text-sm sm:text-base">
+            {t("errors.title")}
+          </p>
           <p className="text-red-500 break-words text-xs sm:text-sm">{error}</p>
         </div>
       )}
@@ -204,42 +276,58 @@ export default function EnhancementViewer({
           </h3>
 
           {/* ATS Score Display */}
-          {atsScores && (atsScores.original !== null || atsScores.enhanced !== null) && (
-            <div className="bg-white p-4 sm:p-6 rounded-xl mb-4 sm:mb-6 shadow-md border border-blue-100">
-              <h4 className="text-base sm:text-lg font-bold text-blue-900 mb-4">ATS Score Analysis</h4>
-              
-              <div className="space-y-4">
-                {atsScores.original !== null && (
-                  <ATSScoreBar score={atsScores.original} label="Original Score" />
+          {atsScores &&
+            (atsScores.original !== null || atsScores.enhanced !== null) && (
+              <div className="bg-white p-4 sm:p-6 rounded-xl mb-4 sm:mb-6 shadow-md border border-blue-100">
+                <h4 className="text-base sm:text-lg font-bold text-blue-900 mb-4">
+                  ATS Score Analysis
+                </h4>
+
+                <div className="space-y-4">
+                  {atsScores.original !== null && (
+                    <ATSScoreBar
+                      score={atsScores.original}
+                      label="Original Score"
+                    />
+                  )}
+
+                  {atsScores.enhanced !== null && (
+                    <ATSScoreBar
+                      score={atsScores.enhanced}
+                      label="Enhanced Score"
+                    />
+                  )}
+                </div>
+
+                {/* Score improvement badge */}
+                {atsScores.original !== null && atsScores.enhanced !== null && (
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-green-800 font-semibold text-sm sm:text-base text-center">
+                      ✨ Improvement: +{atsScores.enhanced - atsScores.original}{" "}
+                      points
+                    </p>
+                  </div>
                 )}
-                
-                {atsScores.enhanced !== null && (
-                  <ATSScoreBar score={atsScores.enhanced} label="Enhanced Score" />
+
+                {/* Key improvements */}
+                {atsScores.improvements.length > 0 && (
+                  <div className="mt-4">
+                    <p className="font-semibold text-gray-700 mb-2 text-sm sm:text-base">
+                      Key Improvements:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600 text-xs sm:text-sm">
+                      {atsScores.improvements
+                        .slice(0, 5)
+                        .map((improvement, idx) => (
+                          <li key={idx} className="break-words">
+                            {improvement}
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
                 )}
               </div>
-
-              {/* Score improvement badge */}
-              {atsScores.original !== null && atsScores.enhanced !== null && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-green-800 font-semibold text-sm sm:text-base text-center">
-                    ✨ Improvement: +{atsScores.enhanced - atsScores.original} points
-                  </p>
-                </div>
-              )}
-
-              {/* Key improvements */}
-              {atsScores.improvements.length > 0 && (
-                <div className="mt-4">
-                  <p className="font-semibold text-gray-700 mb-2 text-sm sm:text-base">Key Improvements:</p>
-                  <ul className="list-disc list-inside space-y-1 text-gray-600 text-xs sm:text-sm">
-                    {atsScores.improvements.slice(0, 5).map((improvement, idx) => (
-                      <li key={idx} className="break-words">{improvement}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
+            )}
 
           {/* Enhanced Resume Content */}
           <div className="bg-white text-blue-800 p-4 sm:p-6 rounded-xl max-h-[400px] sm:max-h-[600px] overflow-y-auto border border-blue-100 shadow-inner">

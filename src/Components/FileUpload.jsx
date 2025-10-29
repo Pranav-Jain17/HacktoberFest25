@@ -1,7 +1,11 @@
-import { useRef, useState } from "react";
+import { useRef, useState, forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 
-export default function FileUpload({ setResumeFile }) {
+export default function FileUpload({
+  setResumeFile,
+  uploadButtonRef,
+  shortcutLabel,
+}) {
   const inputRef = useRef();
   const [dragActive, setDragActive] = useState(false);
   const { t } = useTranslation();
@@ -42,18 +46,24 @@ export default function FileUpload({ setResumeFile }) {
       >
         <span className="mb-2 text-4xl text-blue-400">📄</span>
         <h2 className="text-lg font-semibold text-blue-700 mb-2">
-          {t("upload.title")}{" "}
-          <span className="text-blue-500">PDF</span>,{" "}
+          {t("upload.title")} <span className="text-blue-500">PDF</span>,{" "}
           <span className="text-blue-500">DOCX</span> {t("upload.or")}{" "}
-          <span className="text-blue-500">TXT</span>{" "}
-          {t("upload.here")}
+          <span className="text-blue-500">TXT</span> {t("upload.here")}
         </h2>
-        <button
-          onClick={(e) => (e.stopPropagation(), inputRef.current.click())}
-          className="px-4 py-2 rounded-lg bg-blue-600 text-white font-bold shadow hover:bg-blue-700 transition"
-        >
-          {t("upload.button")}
-        </button>
+        <div className="relative group inline-block">
+          <button
+            ref={uploadButtonRef}
+            onClick={(e) => (e.stopPropagation(), inputRef.current.click())}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white font-bold shadow hover:bg-blue-700 transition"
+          >
+            {t("upload.button")}
+          </button>
+          {shortcutLabel && (
+            <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded shadow border border-blue-200 select-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none">
+              {shortcutLabel}
+            </span>
+          )}
+        </div>
         <input
           type="file"
           accept=".pdf,.doc,.docx,.txt"
