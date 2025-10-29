@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced File Uploader</title>
+    <!-- 1. Include Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Custom class for the drag-over state */
+        .drag-over {
+            border-color: #2563eb; /* blue-600 */
+            background-color: #eff6ff; /* blue-50 */
+            box-shadow: 0 0 0 2px #3b82f6; /* ring-2 ring-blue-500 */
+        }
+
+        /* Subtle keyframe animation for the spinner */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-fast {
+            animation: spin 0.8s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-lg bg-white p-6 rounded-xl shadow-lg">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Upload Your Resume</h2>
+        
+        <!-- 
+          The File Upload Drop Zone
+          - It's a <label> linked to the hidden <input> for accessibility.
+          - `focus-within` provides a ring when keyboard-navigated.
+        -->
+        <label 
+          id="drop-zone"
+          for="file-upload" 
+          class="flex flex-col items-center justify-center w-full p-8 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer 
+                 bg-gray-50 transition-colors duration-200 ease-in-out 
+                 hover:border-blue-500 hover:bg-blue-50 
+                 focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 focus-within:border-blue-500 focus-within:bg-blue-50"
+          role="button"
+          aria-label="File upload drop zone"
+        >
+            <!-- Upload Icon -->
+            <svg class="w-12 h-12 text-gray-400 transition-colors duration-200" id="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l-3 3m3-3l3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.33 0 4.5 4.5 0 01-1.41 8.775H6.75z" />
+            </svg>
+
+            <!-- Microcopy Text -->
+            <p class="mt-4 text-lg font-semibold text-gray-700" id="upload-text-main">
+                Drag & drop file here
+            </p>
+            <p class="text-sm text-gray-500" id="upload-text-sub">
+                or click to upload
+            </p>
+            <p class="mt-2 text-xs text-gray-400">
+                PDF, DOCX, or TXT (MAX. 5MB)
+            </p>
+            
+            <!-- Hidden File Input -->
+            <input id="file-upload" name="file-upload" type="file" class="sr-only" 
+                   accept=".pdf,.doc,.docx,.txt"
+            >
+        </label>
+        
+        <!-- 
+          File Upload Status Area
+          Shows the file being processed, and success/error states.
+        -->
+        <div id="file-status-container" class="mt-4 space-y-2">
+            <!-- This is a template for the file item. JS will create this. -->
+            <!-- 
+            <div class="flex justify-between items-center p-3 bg-gray-100 rounded-lg border border-gray-200">
+                <span class="text-sm font-medium text-gray-800 truncate">my_resume.pdf</span>
+                <div id="file-status-icon">
+                    <svg class="animate-spin-fast h-5 w-5 text-blue-500" ...> Spinner </svg>
+                    <svg class="h-5 w-5 text-green-500" ...> Check </svg>
+                    <svg class="h-5 w-5 text-red-500" ...> Error </svg>
+                </div>
+            </div>
+            -->
+        </div>
+
+        <!-- 
+          Visual Status Message
+          Shows success or error text to sighted users.
+        -->
+        <p id="visual-status-message" class="mt-2 text-sm text-center font-medium" role="status"></p>
+
+    </div>
+
+    <!-- 
+      ARIA-Live Region for Screen Readers
+      This is visually hidden but announces status changes.
+    -->
+    <div id="sr-status-message" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+
+    <!-- 2. Our Custom JavaScript -->
+    <script>
+        // Get all necessary DOM elements
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-upload');
+        const fileStatusContainer = document.getElementById('file-status-container');
+        const visualStatus = document.getElementById('visual-status-message');
+        const srStatus = document.getElementById('sr-status-message');
+        const uploadIcon = document.getElementById('upload-icon');
+        const uploadTextMain = document.getElementById('upload-text-main');
+        const uploadTextSub = document.getElementById('upload-text-sub');
+
+        // --- Icon SVGs for status ---
+        const spinnerIcon = `
+            <svg class="animate-spin-fast h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>`;
+        
+        const checkIcon = `
+            <svg class="h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>`;
+        
+        const errorIcon = `
+            <svg class="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>`;
+
+        const removeIcon = `
+            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>`;
+
+        // --- Event Listeners for Drag & Drop ---
+
+        // Prevent default behaviors for drag events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        // Highlight drop zone when file is dragged over
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('drag-over');
+                uploadIcon.classList.add('text-blue-500');
+                uploadTextMain.classList.add('text-blue-600');
+            }, false);
+        });
+
+        // Remove highlight when file leaves drop zone
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('drag-over');
+                uploadIcon.classList.remove('text-blue-500');
+                uploadTextMain.classList.remove('text-blue-600');
+            }, false);
+        });
+
+        // Handle dropped file
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }, false);
+
+        // Handle file selected via click
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // --- Core File Handling Function ---
+        function handleFiles(files) {
+            // We'll only handle the first file
+            const file = files[0];
+            if (!file) return;
+
+            // Simple validation (e.g., file type)
+            const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+            if (!allowedTypes.includes(file.type)) {
+                showError(file, 'Invalid file type. Please upload PDF, DOCX, or TXT.');
+                return;
+            }
+
+            // Simple validation (e.g., file size)
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.size > maxSize) {
+                showError(file, 'File is too large. Maximum size is 5MB.');
+                return;
+            }
+
+            // If valid, simulate upload
+            showUploading(file);
+        }
+        
+        function showUploading(file) {
+            clearStatus();
+            
+            // Create the file item UI
+            const fileItem = document.createElement('div');
+            fileItem.className = 'flex justify-between items-center p-3 bg-gray-100 rounded-lg border border-gray-200';
+            fileItem.innerHTML = `
+                <span class="text-sm font-medium text-gray-800 truncate" title="${file.name}">${file.name}</span>
+                <div class="file-status-icon">${spinnerIcon}</div>
+            `;
+            fileStatusContainer.appendChild(fileItem);
+            
+            // Set status messages
+            setVisualStatus('Uploading...', 'text-blue-600');
+            setSRStatus(`Uploading file: ${file.name}`);
+
+            // Simulate upload delay
+            setTimeout(() => {
+                // To test error, uncomment this:
+                // if (file.name.includes('error')) {
+                //    showError(file, 'Mock upload failed.');
+                //    return;
+                // }
+                showSuccess(file, fileItem);
+            }, 1500); // 1.5-second simulation
+        }
+
+        function showSuccess(file, fileItem) {
+            // Update status icon to checkmark
+            const iconContainer = fileItem.querySelector('.file-status-icon');
+            iconContainer.innerHTML = checkIcon;
+            
+            // Add a remove button
+            const removeButton = document.createElement('button');
+            removeButton.className = 'ml-2 text-gray-400 hover:text-red-500 transition-colors';
+            removeButton.innerHTML = removeIcon;
+            removeButton.setAttribute('aria-label', `Remove file ${file.name}`);
+            removeButton.onclick = () => removeFile(fileItem);
+            iconContainer.appendChild(removeButton);
+
+            // Set status messages
+            setVisualStatus('File uploaded successfully!', 'text-green-600');
+            setSRStatus(`File ${file.name} uploaded successfully.`);
+            
+            // Clear success message after 3 seconds
+            clearVisualStatus(3000);
+        }
+
+        function showError(file, message) {
+            clearStatus();
+            
+            // Create the file item UI with error
+            const fileItem = document.createElement('div');
+            fileItem.className = 'flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200';
+            fileItem.innerHTML = `
+                <span class="text-sm font-medium text-red-700 truncate" title="${file.name}">${file.name}</span>
+                <div class="file-status-icon flex items-center">
+                    ${errorIcon}
+                </div>
+            `;
+            fileStatusContainer.appendChild(fileItem);
+
+            // Add a remove button
+            const iconContainer = fileItem.querySelector('.file-status-icon');
+            const removeButton = document.createElement('button');
+            removeButton.className = 'ml-2 text-gray-400 hover:text-red-500 transition-colors';
+            removeButton.innerHTML = removeIcon;
+            removeButton.setAttribute('aria-label', `Remove file ${file.name}`);
+            removeButton.onclick = () => removeFile(fileItem);
+            iconContainer.appendChild(removeButton);
+
+            // Set status messages
+            setVisualStatus(message, 'text-red-600');
+            setSRStatus(`Error uploading ${file.name}: ${message}`);
+        }
+
+        function removeFile(fileItem) {
+            fileItem.remove();
+            clearStatus();
+            setVisualStatus('File removed.', 'text-gray-600');
+            setSRStatus('File removed.');
+            
+            // IMPORTANT: Reset the file input so the user can re-upload the same file
+            fileInput.value = null;
+
+            clearVisualStatus(2000);
+        }
+        
+        // --- Utility Functions ---
+
+        function clearStatus() {
+            fileStatusContainer.innerHTML = '';
+            visualStatus.textContent = '';
+            srStatus.textContent = '';
+        }
+        
+        function setVisualStatus(message, colorClass) {
+            visualStatus.textContent = message;
+            visualStatus.className = `mt-2 text-sm text-center font-medium ${colorClass}`;
+        }
+
+        function setSRStatus(message) {
+            srStatus.textContent = message;
+        }
+
+        function clearVisualStatus(delay) {
+             setTimeout(() => {
+                visualStatus.textContent = '';
+            }, delay);
+        }
+
+    </script>
+</body>
+</html>
