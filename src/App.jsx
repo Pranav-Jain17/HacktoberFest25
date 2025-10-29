@@ -1,18 +1,40 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import EliteHeader from "./Components/EliteHeader";
 import FileUpload from "./Components/FileUpload";
 import EnhancementViewer from "./Components/EnhancementViewer";
 import DownloadButton from "./Components/DownloadButton";
 import './i18n';
-export default function App() {
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import "./styles/toastAnimations.css"
+
+export default function App() { 
   const [resumeFile, setResumeFile] = useState(null);
   const [enhancedText, setEnhancedText] = useState("");
   const [base64FileContent, setBase64FileContent] = useState("");
   const [fileFormat, setFileFormat] = useState("");
 
+  // Welcome Toast 
+  useEffect(() => {
+  const hasVisited = sessionStorage.getItem("hasVisited");
+  if (!hasVisited) {
+    setTimeout(() => {
+      toast.info("👋 Welcome! Let’s enhance your resume!", {
+      });
+    }, 100); // 100ms delay
+    sessionStorage.setItem("hasVisited", "true");
+  }
+}, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col items-center px-2">
       <EliteHeader />
+      <ToastContainer 
+        autoClose={4000}
+        hideProgressBar={false}
+        closeOnClick = {true}
+      />
+
       <main className="flex-1 w-full max-w-2xl mx-auto flex flex-col items-center justify-center">
         {!resumeFile ? (
           <FileUpload setResumeFile={setResumeFile} />
