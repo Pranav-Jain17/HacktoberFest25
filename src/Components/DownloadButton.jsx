@@ -53,7 +53,7 @@ export default function DownloadButton({
     <div className="text-center">
       <button
         onClick={handleDownload}
-        className="mt-6 px-5 py-3 text-lg font-bold text-white bg-blue-700 rounded-xl shadow-lg hover:bg-blue-900 active:scale-95 transition"
+        className="mt-6 px-5 py-3 text-lg font-bold text-white bg-blue-700 rounded-xl shadow-lg hover:bg-blue-800 active:scale-95 transition"
       >
         {t("download.button")}
       </button>

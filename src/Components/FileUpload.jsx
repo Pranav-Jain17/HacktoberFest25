@@ -36,16 +36,18 @@ export default function FileUpload({ setResumeFile }) {
         onDragOver={handleDrag}
         onDragLeave={handleDrag}
         onDrop={handleDrop}
-        className={`rounded-2xl border-2 transition-all duration-300 border-blue-300 cursor-pointer w-full bg-white px-6 py-12 md:py-20 flex flex-col items-center gap-4 shadow-lg ${
-          dragActive ? "border-blue-500 bg-blue-50" : ""
-        }`}
+        className={`rounded-2xl border-2 transition-all duration-300 
+        border-blue-600 hover:border-blue-800 focus:border-blue-800 
+        cursor-pointer w-full bg-white px-6 py-12 md:py-20 
+        flex flex-col items-center gap-4 shadow-lg 
+        ${dragActive ? "border-blue-700 bg-blue-100" : ""}`}
       >
-        <span className="mb-2 text-4xl text-blue-400">📄</span>
+        <span className="mb-2 text-4xl text-blue-700">📄</span>
         <h2 className="text-lg font-semibold text-blue-700 mb-2">
           {t("upload.title")}{" "}
-          <span className="text-blue-500">PDF</span>,{" "}
-          <span className="text-blue-500">DOCX</span> {t("upload.or")}{" "}
-          <span className="text-blue-500">TXT</span>{" "}
+          <span className="text-blue-700">PDF</span>,{" "}
+          <span className="text-blue-700">DOCX</span> {t("upload.or")}{" "}
+          <span className="text-blue-700">TXT</span>{" "}
           {t("upload.here")}
         </h2>
         <button
@@ -61,7 +63,7 @@ export default function FileUpload({ setResumeFile }) {
           onChange={handleChange}
           className="hidden"
         />
-        <small className="block mt-2 text-xs text-blue-400">
+        <small className="block mt-2 text-xs text-blue-600">
           {t("upload.note")}
         </small>
       </div>

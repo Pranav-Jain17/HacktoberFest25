@@ -93,7 +93,7 @@ export function generateEliteResumeHTML(enhancedText) {
   }
   .date-range {
     float: right;
-    color: #999;
+    color: #767676;
     font-size: 0.9em;
   }
 </style>

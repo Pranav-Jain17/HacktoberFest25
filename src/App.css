@@ -1,0 +1,10 @@
+/* App.css */
+
+/* Example: Custom hero section */
+.hero-title {
+  @apply text-4xl font-bold text-[color:var(--color-heading)];
+}
+
+.hero-link {
+  @apply underline text-[color:var(--color-link)] hover:text-[color:var(--color-link-hover)];
+}
