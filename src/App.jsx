@@ -3,18 +3,16 @@ import EliteHeader from "./Components/EliteHeader";
 import FileUpload from "./Components/FileUpload";
 import EnhancementViewer from "./Components/EnhancementViewer";
 import DownloadButton from "./Components/DownloadButton";
-import './i18n';
-
-
-
+import "./i18n";
 
 export default function App() {
   const [resumeFile, setResumeFile] = useState(null);
   const [enhancedText, setEnhancedText] = useState("");
   const [base64FileContent, setBase64FileContent] = useState("");
   const [fileFormat, setFileFormat] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  // New central states for quota error handling
+  // Central states for quota error handling
   const [errorData, setErrorData] = useState({
     message: "",
     isQuota: false,
@@ -22,6 +20,11 @@ export default function App() {
   });
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [resetTimer, setResetTimer] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Countdown for retry after quota lock
   useEffect(() => {
@@ -36,7 +39,12 @@ export default function App() {
     }
   }, [resetTimer, isButtonDisabled]);
 
-  // Quota lock visual animation
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
   const QuotaErrorBanner = () =>
     errorData.isQuota ? (
       <div className="fixed top-5 left-1/2 transform -translate-x-1/2 w-[90%] md:w-[500px] bg-red-600 text-white text-center py-4 px-6 rounded-xl shadow-lg animate-pulse z-50">
@@ -48,18 +56,30 @@ export default function App() {
       </div>
     ) : null;
 
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 text-white z-50">
+        <h1 className="text-2xl font-semibold tracking-wide text-center">
+          Enhance your resume with AI precision
+        </h1>
+        <div className="mt-8 w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col">
+      <QuotaErrorBanner />
+
       <div className="w-full px-4 sm:px-6 md:px-8">
         <EliteHeader />
       </div>
-      
+
       <main className="flex-1 w-full max-w-2xl mx-auto flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 py-4 sm:py-6">
         {!resumeFile ? (
           <FileUpload setResumeFile={setResumeFile} />
         ) : (
           <div className="w-full space-y-4">
-            {/* Reset button for mobile */}
             <button
               onClick={() => {
                 setResumeFile(null);
@@ -77,14 +97,13 @@ export default function App() {
               setEnhancedText={setEnhancedText}
               setBase64FileContent={setBase64FileContent}
               setFileFormat={setFileFormat}
-              // Pass new error-related props
               errorData={errorData}
               setErrorData={setErrorData}
               isButtonDisabled={isButtonDisabled}
               setIsButtonDisabled={setIsButtonDisabled}
               setResetTimer={setResetTimer}
             />
-            
+
             {enhancedText && base64FileContent && (
               <DownloadButton
                 enhancedFileBase64={base64FileContent}
@@ -94,7 +113,7 @@ export default function App() {
           </div>
         )}
       </main>
-      
+
       <footer className="text-xs sm:text-sm text-blue-800 py-4 font-medium opacity-80 text-center px-4">
         © 2025 | AI Resume Enhancer SPA
       </footer>
