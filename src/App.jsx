@@ -11,14 +11,49 @@ export default function App() {
   const [enhancedText, setEnhancedText] = useState("");
   const [base64FileContent, setBase64FileContent] = useState("");
   const [fileFormat, setFileFormat] = useState("");
-
   const [isLoading, setIsLoading] = useState(true);
 
+  const [errorData, setErrorData] = useState({
+    message: "",
+    isQuota: false,
+    delay: 0,
+  });
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+  const [resetTimer, setResetTimer] = useState(0);
+
   useEffect(() => {
-    
     const timer = setTimeout(() => setIsLoading(false), 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (resetTimer > 0) {
+      const interval = setInterval(() => {
+        setResetTimer((t) => (t > 1 ? t - 1 : 0));
+      }, 1000);
+      return () => clearInterval(interval);
+    } else if (resetTimer === 0 && isButtonDisabled) {
+      setIsButtonDisabled(false);
+      setErrorData({ message: "", isQuota: false, delay: 0 });
+    }
+  }, [resetTimer, isButtonDisabled]);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const QuotaErrorBanner = () =>
+    errorData.isQuota ? (
+      <div className="fixed top-5 left-1/2 transform -translate-x-1/2 w-[90%] md:w-[500px] bg-red-600 text-white text-center py-4 px-6 rounded-xl shadow-lg animate-pulse z-50">
+        <p className="font-semibold text-lg mb-1">🚫 API Quota Reached</p>
+        <p className="text-sm opacity-90 mb-1">{errorData.message}</p>
+        <p className="text-xs opacity-80">
+          Retrying available in {formatTime(resetTimer)}...
+        </p>
+      </div>
+    ) : null;
 
   return (
     <AnimatePresence mode="wait">
@@ -30,7 +65,6 @@ export default function App() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.8 }}
         >
-          
           <motion.h1
             className="text-2xl font-semibold tracking-wide text-center"
             initial={{ opacity: 0, y: 20 }}
@@ -54,6 +88,8 @@ export default function App() {
           animate={{ opacity: 1 }}
           transition={{ duration: 1 }}
         >
+          <QuotaErrorBanner />
+
           <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex flex-col">
             <div className="w-full px-4 sm:px-6 md:px-8">
               <EliteHeader />
@@ -81,6 +117,11 @@ export default function App() {
                     setEnhancedText={setEnhancedText}
                     setBase64FileContent={setBase64FileContent}
                     setFileFormat={setFileFormat}
+                    errorData={errorData}
+                    setErrorData={setErrorData}
+                    isButtonDisabled={isButtonDisabled}
+                    setIsButtonDisabled={setIsButtonDisabled}
+                    setResetTimer={setResetTimer}
                   />
 
                   {enhancedText && base64FileContent && (
