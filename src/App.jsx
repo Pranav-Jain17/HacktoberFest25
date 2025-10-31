@@ -4,6 +4,8 @@ import EliteHeader from "./Components/EliteHeader";
 import FileUpload from "./Components/FileUpload";
 import EnhancementViewer from "./Components/EnhancementViewer";
 import DownloadButton from "./Components/DownloadButton";
+ feature-new-logo
+
 import Footer from "./Components/Footer";
 import Privacy from "./pages/Privacy";
 import License from "./pages/License";
@@ -15,7 +17,9 @@ export default function App() {
   const [enhancedText, setEnhancedText] = useState("");
   const [base64FileContent, setBase64FileContent] = useState("");
   const [fileFormat, setFileFormat] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Central states for quota error handling
   const [errorData, setErrorData] = useState({
     message: "",
     isQuota: false,
@@ -24,6 +28,12 @@ export default function App() {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [resetTimer, setResetTimer] = useState(0);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Countdown for retry after quota lock
   useEffect(() => {
     if (resetTimer > 0) {
       const interval = setInterval(() => {
@@ -36,6 +46,12 @@ export default function App() {
     }
   }, [resetTimer, isButtonDisabled]);
 
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
   const QuotaErrorBanner = () =>
     errorData.isQuota ? (
       <div className="fixed top-5 left-1/2 transform -translate-x-1/2 w-[90%] md:w-[500px] bg-red-600 text-white text-center py-4 px-6 rounded-xl shadow-lg animate-pulse z-50">
@@ -44,6 +60,17 @@ export default function App() {
         <p className="text-xs opacity-80">Retrying available in {resetTimer}s...</p>
       </div>
     ) : null;
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 text-white z-50">
+        <h1 className="text-2xl font-semibold tracking-wide text-center">
+          Enhance your resume with AI precision
+        </h1>
+        <div className="mt-8 w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-800 transition-colors duration-300">
