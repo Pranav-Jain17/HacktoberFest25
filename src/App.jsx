@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
+import { Routes, Route } from "react-router-dom"; // ✅ Add this
 import EliteHeader from "./Components/EliteHeader";
 import FileUpload from "./Components/FileUpload";
 import EnhancementViewer from "./Components/EnhancementViewer";
 import DownloadButton from "./Components/DownloadButton";
-import './i18n';
-
-
-
+import Footer from "./Components/Footer";
+import Privacy from "./pages/Privacy";   // ✅ Import new pages
+import License from "./pages/License";
+import About from "./pages/About";
+import "./i18n";
 
 export default function App() {
   const [resumeFile, setResumeFile] = useState(null);
@@ -14,7 +16,7 @@ export default function App() {
   const [base64FileContent, setBase64FileContent] = useState("");
   const [fileFormat, setFileFormat] = useState("");
 
-  // New central states for quota error handling
+  // Central states for quota error handling
   const [errorData, setErrorData] = useState({
     message: "",
     isQuota: false,
@@ -36,14 +38,14 @@ export default function App() {
     }
   }, [resetTimer, isButtonDisabled]);
 
-  // Quota lock visual animation
+  // Quota lock banner
   const QuotaErrorBanner = () =>
     errorData.isQuota ? (
       <div className="fixed top-5 left-1/2 transform -translate-x-1/2 w-[90%] md:w-[500px] bg-red-600 text-white text-center py-4 px-6 rounded-xl shadow-lg animate-pulse z-50">
         <p className="font-semibold text-lg mb-1">🚫 API Quota Reached</p>
         <p className="text-sm opacity-90 mb-1">{errorData.message}</p>
         <p className="text-xs opacity-80">
-          Retrying available in {formatTime(resetTimer)}...
+          Retrying available in {resetTimer}s...
         </p>
       </div>
     ) : null;
@@ -53,51 +55,60 @@ export default function App() {
       <div className="w-full px-4 sm:px-6 md:px-8">
         <EliteHeader />
       </div>
-      
-      <main className="flex-1 w-full max-w-2xl mx-auto flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 py-4 sm:py-6">
-        {!resumeFile ? (
-          <FileUpload setResumeFile={setResumeFile} />
-        ) : (
-          <div className="w-full space-y-4">
-            {/* Reset button for mobile */}
-            <button
-              onClick={() => {
-                setResumeFile(null);
-                setEnhancedText("");
-                setBase64FileContent("");
-                setFileFormat("");
-              }}
-              className="text-sm text-blue-600 hover:text-blue-800 underline mb-2"
-            >
-              ← Upload different file
-            </button>
 
-            <EnhancementViewer
-              resumeFile={resumeFile}
-              setEnhancedText={setEnhancedText}
-              setBase64FileContent={setBase64FileContent}
-              setFileFormat={setFileFormat}
-              // Pass new error-related props
-              errorData={errorData}
-              setErrorData={setErrorData}
-              isButtonDisabled={isButtonDisabled}
-              setIsButtonDisabled={setIsButtonDisabled}
-              setResetTimer={setResetTimer}
-            />
-            
-            {enhancedText && base64FileContent && (
-              <DownloadButton
-                enhancedFileBase64={base64FileContent}
-                fileFormat={fileFormat}
-              />
-            )}
-          </div>
-        )}
+      <main className="flex-1 w-full max-w-2xl mx-auto flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 py-4 sm:py-6">
+        <Routes>
+          {/* 🏠 Home route */}
+          <Route
+            path="/"
+            element={
+              !resumeFile ? (
+                <FileUpload setResumeFile={setResumeFile} />
+              ) : (
+                <div className="w-full space-y-4">
+                  <button
+                    onClick={() => {
+                      setResumeFile(null);
+                      setEnhancedText("");
+                      setBase64FileContent("");
+                      setFileFormat("");
+                    }}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline mb-2"
+                  >
+                    ← Upload different file
+                  </button>
+
+                  <EnhancementViewer
+                    resumeFile={resumeFile}
+                    setEnhancedText={setEnhancedText}
+                    setBase64FileContent={setBase64FileContent}
+                    setFileFormat={setFileFormat}
+                    errorData={errorData}
+                    setErrorData={setErrorData}
+                    isButtonDisabled={isButtonDisabled}
+                    setIsButtonDisabled={setIsButtonDisabled}
+                    setResetTimer={setResetTimer}
+                  />
+
+                  {enhancedText && base64FileContent && (
+                    <DownloadButton
+                      enhancedFileBase64={base64FileContent}
+                      fileFormat={fileFormat}
+                    />
+                  )}
+                </div>
+              )
+            }
+          />
+
+          {/* 📄 Other pages */}
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/license" element={<License />} />
+          <Route path="/about" element={<About />} />
+        </Routes>
       </main>
-      
-      <footer className="text-xs sm:text-sm text-blue-800 py-4 font-medium opacity-80 text-center px-4">
-        © 2025 | AI Resume Enhancer SPA
-      </footer>
+
+      <Footer />
     </div>
   );
 }
