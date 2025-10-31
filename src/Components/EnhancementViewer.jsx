@@ -9,7 +9,7 @@ function cleanResumeText(input) {
     .replace(/^[=\-#\s]+$/gm, "")
     .replace(/^#+\s?/gm, "")
     .replace(/^={2,}\s?/gm, "")
-    .replace(/^\s*[\*\-\+]\s?/gm, "")
+    .replace(/^\s*[*\-+]\s?/gm, "")
     .replace(/\*\*/g, "")
     .replace(/\*/g, "")
     .replace(/^[=#]+\s*(.*)$/gm, "$1")
@@ -47,7 +47,7 @@ function extractATSScores(text) {
   if (improvementsMatch) {
     scores.improvements = improvementsMatch[1]
       .split('\n')
-      .map(line => line.replace(/^[\s\-\*]+/, '').trim())
+      .map(line => line.replace(/^[\s\-*]+/, '').trim())
       .filter(line => line.length > 0);
   }
 
