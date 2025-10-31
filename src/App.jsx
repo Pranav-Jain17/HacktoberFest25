@@ -4,7 +4,10 @@ import EliteHeader from "./Components/EliteHeader";
 import FileUpload from "./Components/FileUpload";
 import EnhancementViewer from "./Components/EnhancementViewer";
 import DownloadButton from "./Components/DownloadButton";
- feature-new-logo
+import './i18n';
+import "react-toastify/dist/ReactToastify.css";
+import "./styles/toastAnimations.css"
+import { ToastContainer, toast } from "react-toastify";
 
 import Footer from "./Components/Footer";
 import Privacy from "./pages/Privacy";
@@ -28,9 +31,16 @@ export default function App() {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [resetTimer, setResetTimer] = useState(0);
 
+  // Welcome Toast Message 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2000);
-    return () => clearTimeout(timer);
+    const hasVisited = sessionStorage.getItem("hasVisited");
+    if (!hasVisited) {
+      setTimeout(() => {
+        toast.info("👋 Welcome! Let’s enhance your resume!", {
+        });
+      }, 100); // 100ms delay
+      sessionStorage.setItem("hasVisited", "true");
+    }
   }, []);
 
   // Countdown for retry after quota lock
@@ -76,6 +86,11 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-800 transition-colors duration-300">
       <div className="w-full px-4 sm:px-6 md:px-8">
         <EliteHeader />
+        <ToastContainer 
+          autoClose={4000}
+          hideProgressBar={false}
+          closeOnClick = {true}
+        />
       </div>
 
       <main className="flex-1 w-full max-w-2xl mx-auto flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 py-4 sm:py-6">
